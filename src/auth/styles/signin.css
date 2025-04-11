@@ -1,0 +1,68 @@
+/* Container Layout */
+.container {
+  display: flex;
+  height: 100vh;
+}
+
+.leftpanel {
+  flex: 1;
+  background-color: black;
+  color: gold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rightpanel {
+  /* flex: 1; */
+  padding: 180px;
+  text-align: center;
+  justify-content: center;
+}
+
+/* Form Title */
+.login-title {
+  font-size: 24px;
+  font-weight: bold;
+}
+
+.title-underline {
+  width: 50px;
+  border: 2px solid gold;
+  margin: 5px auto 20px;
+}
+
+/* Input Fields */
+.ant-input,
+.ant-input-login {
+  height: 40px !important;  /* Increased height */
+  font-size: 20px !important; /* Increased font size */
+border-color: #e6c200;/* Gold border */
+}
+
+/* Sign In Button */
+.ant-btn-primary {
+  background-color: gold !important;
+  border: none !important;
+  height: 50px !important;
+  font-size: 18px !important;
+  font-weight: bold;
+  color: black !important;
+}
+
+.ant-btn-primary:hover,
+.ant-btn-primary:focus {
+  background-color: #e6c200 !important;
+}
+
+/* Footer Links */
+.signin-footer {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+}
+
+.forgot, .signup_text {
+  cursor: pointer;
+  font-weight: bold;
+}

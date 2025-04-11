@@ -1,0 +1,25 @@
+.container {
+  display: flex;
+  height: 100vh;
+  width: 100%;
+}
+
+.leftpanel {
+  width: 70%;
+  background-color: #0e0e0e; /* or use image here */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.leftpanel img {
+  width: 100%;
+  height: auto;
+  object-fit: contain;
+}
+
+.rightpanel {
+  width: 30%;
+  background-color: #fff;
+  padding: 2rem;
+}
