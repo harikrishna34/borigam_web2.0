@@ -14,7 +14,7 @@ const LayoutWrapper = ({ children, pageTitle }: LayoutWrapperProps) => {
 
   return (
     <Layout
-      style={{ minHeight: "100vh", display: "flex", overflowX: "hidden" }}
+      style={{ minHeight: "100vh", display: "flex", overflowX: "hidden", background: "white" }}
     >
       <AppSidebar />
       <Layout>
@@ -22,7 +22,7 @@ const LayoutWrapper = ({ children, pageTitle }: LayoutWrapperProps) => {
         <Content
           style={{
             padding: "20px",
-            background: "#F5F5F5",
+            background: "white",
             overflow: "auto",
             flex: 1,
           }}

@@ -11,7 +11,7 @@ import {
 } from "antd";
 import LayoutWrapper from "../../../components/adminlayout/layoutWrapper";
 import { useNavigate } from "react-router-dom";
-import add_dashboard from "../../../assets/add_dashboard.svg";
+import add_dashboard from "../../../assets/add_dashboard.png"
 
 const { Title } = Typography;
 
