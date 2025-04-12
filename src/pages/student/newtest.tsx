@@ -69,6 +69,9 @@ const TestScreen: React.FC = () => {
   const [showTestList, setShowTestList] = useState(false);
   const [timerActive, setTimerActive] = useState(true);
   const [seenQuestions, setSeenQuestions] = useState<number[]>([]);
+  const videoRef = React.useRef<HTMLVideoElement>(null);
+  const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
+  const [cameraError, setCameraError] = useState<string | null>(null);
 
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
@@ -76,6 +79,58 @@ const TestScreen: React.FC = () => {
 
   useEffect(() => {
     fetchTestStatus();
+  }, []);
+
+  useEffect(() => {
+    const handleContextMenu = (e: MouseEvent) => e.preventDefault();
+    const handleBlur = () => {
+      message.warning("Tab switching is not allowed!");
+    };
+
+    window.addEventListener("contextmenu", handleContextMenu);
+    window.addEventListener("blur", handleBlur);
+
+    return () => {
+      window.removeEventListener("contextmenu", handleContextMenu);
+      window.removeEventListener("blur", handleBlur);
+    };
+  }, []);
+
+  useEffect(() => {
+    const getCamera = async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { width: 1280, height: 720 },
+        });
+
+        console.log("Stream active tracks:", stream.getTracks()); // Should show video track
+        setMediaStream(stream);
+
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          console.log("Stream assigned to video element");
+
+          // Add event listeners for debugging
+          videoRef.current.onloadedmetadata = () => {
+            console.log("Video metadata loaded");
+          };
+          videoRef.current.onplay = () => {
+            console.log("Video started playing");
+          };
+          videoRef.current.onerror = (e) => {
+            console.error("Video error:", e);
+          };
+        }
+      } catch (err) {
+        console.error("Camera error:", err);
+      }
+    };
+
+    getCamera();
+
+    return () => {
+      mediaStream?.getTracks().forEach((track) => track.stop());
+    };
   }, []);
 
   // Timer effect
@@ -91,6 +146,18 @@ const TestScreen: React.FC = () => {
     }
     return () => clearTimeout(timer);
   }, [timeLeft, timerActive]);
+
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = ""; // required for Chrome
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, []);
 
   const handleAutoSubmit = async () => {
     setTimerActive(false);
@@ -533,7 +600,6 @@ const TestScreen: React.FC = () => {
             <Card>
               <Space direction="vertical" size="large">
                 <h2>Question {currentQuestionIndex + 1}</h2>
-                
               </Space>
             </Card>
           </Col>
@@ -585,6 +651,20 @@ const TestScreen: React.FC = () => {
           )}
         </Modal>
       </div>
+      {/* <video
+        ref={videoRef}
+        autoPlay
+        playsInline
+        muted
+        style={{
+          width: "100%",
+          height: "300px",
+          backgroundColor: "black", // Visible if video fails
+          border: "3px solid red", // Temporary border to confirm element bounds
+          objectFit: "cover", // Prevents letterboxing
+          display: "block", // Override any hidden states
+        }}
+      /> */}
     </StudentLayoutWrapper>
   );
 };

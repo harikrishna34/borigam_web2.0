@@ -167,13 +167,13 @@ const SignUpForm: React.FC = () => {
           >
             <Select
               mode="multiple" // Allows selecting multiple roles
-              placeholder="Select role(s)"
+              placeholder="Select role(s)"  
               size="large"
               suffixIcon={<SolutionOutlined />}
             >
-              <Option value="user">User</Option>
-              <Option value="admin">Admin</Option>
               <Option value="superadmin">Super Admin</Option>
+              <Option value="admin">Admin</Option>
+              <Option value="student">Student</Option>
             </Select>
           </Form.Item>
 

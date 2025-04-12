@@ -123,7 +123,6 @@ const AllStudents: React.FC = () => {
         throw new Error(`HTTP error! Status: ${response.status}`);
       }
 
-      const data = await response.json();
       message.success("Student updated successfully");
       setIsModalVisible(false);
       fetchStudents(); // Refresh the student list

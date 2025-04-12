@@ -68,16 +68,20 @@ const AddTest = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    fetchQuestions();
     fetchCourses();
     fetchBatches();
   }, []);
 
-  const fetchQuestions = async () => {
+  const fetchQuestions = async (courseId: number | null) => {
+    if (!courseId) {
+      setFilteredQuestions([]);
+      return;
+    }
+
     try {
       setLoading(true);
       const response = await fetch(
-        "http://localhost:3001/api/question/getAllQuestions",
+        `http://localhost:3001/api/question/getQuestionsByCourseId?id=${courseId}`,
         {
           headers: {
             "Content-Type": "application/json",
@@ -177,6 +181,12 @@ const AddTest = () => {
     setSelectedBatches(selectedBatchIds);
   };
 
+  const handleCourseChange = (value: number) => {
+    setSelectedCourse(value);
+    fetchQuestions(value);
+    setSelectedQuestions([]);
+  };
+
   const handleSubmit = async () => {
     if (!testType) {
       message.error("Please select a test type");
@@ -239,7 +249,7 @@ const AddTest = () => {
       const response = await fetch(
         `http://localhost:3001/api/question/deleteQuestion?id=${questionId}`,
         {
-          method: "DELETE",
+          method: "GET",
           headers: {
             "Content-Type": "application/json",
             token: localStorage.getItem("token") || "",
@@ -250,9 +260,7 @@ const AddTest = () => {
       if (!response.ok) throw new Error("Failed to delete question");
 
       message.success("Question deleted successfully");
-      // Refresh the questions list
-      await fetchQuestions();
-      // Remove the question from selected questions if it was selected
+      await fetchQuestions(selectedCourse);
       setSelectedQuestions((prev) => prev.filter((id) => id !== questionId));
     } catch (error) {
       console.error("Error deleting question:", error);
@@ -299,7 +307,7 @@ const AddTest = () => {
           <Form.Item label="Select Course:" required>
             <Select
               placeholder="Select Course"
-              onChange={(value) => setSelectedCourse(Number(value))}
+              onChange={handleCourseChange}
               value={selectedCourse}
               style={{ width: "100%", marginBottom: "20px" }}
             >
@@ -363,7 +371,7 @@ const AddTest = () => {
               <Spin size="large" />
             </div>
           ) : filteredQuestions.length === 0 ? (
-            <p>No questions available</p>
+            <p>No questions available for selected course</p>
           ) : (
             filteredQuestions.map((question) => (
               <Card

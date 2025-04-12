@@ -11,7 +11,7 @@ import {
 } from "antd";
 import LayoutWrapper from "../../../components/adminlayout/layoutWrapper";
 import { useNavigate } from "react-router-dom";
-import add_dashboard from "../../../assets/add_dashboard.png"
+import add_dashboard from "../../../assets/add_dashboard.png";
 
 const { Title } = Typography;
 
@@ -51,7 +51,6 @@ interface Students {
   countrycode: string;
   status: number;
 }
-
 
 interface UnassignedStudents {
   count: number;
@@ -100,7 +99,6 @@ const Dashboard = () => {
         console.error("Error fetching courses:", error);
       }
     };
-
 
     fetchColleges();
     fetchCourses();
@@ -249,7 +247,6 @@ const Dashboard = () => {
       message.error("Failed to create student");
     }
   };
-
 
   const handleCollegeClick = () => {
     setModalVisible(true);
@@ -493,12 +490,12 @@ const Dashboard = () => {
           >
             <Input />
           </Form.Item>
-          <Form.Item 
+          <Form.Item
             name="code"
             label="College Code"
             rules={[{ required: true, message: "Please enter college code" }]}
           >
-            <Input/>
+            <Input />
           </Form.Item>
           <Title level={5}>Contact Information</Title>
           <Form.Item

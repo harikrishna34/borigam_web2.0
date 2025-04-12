@@ -142,8 +142,6 @@ const AppSidebar = () => {
           />
         </div>
       </div>
-
-      {/* Logout Button - fixed at the bottom with margin */}
       <div
         style={{
           padding: "16px",
