@@ -13,25 +13,35 @@ import {
   Tag,
   Spin,
   Divider,
+  Checkbox,
 } from "antd";
 import StudentLayoutWrapper from "../../components/studentlayout/studentlayoutWrapper";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
+import TextArea from "antd/es/input/TextArea";
+import { useParams } from "react-router-dom";
 
 const { Title, Text } = Typography;
 
 interface Option {
   id: number;
   option_text: string;
-  is_correct: boolean;
+  option_image: string | null;
+  is_correct?: boolean;
 }
 
 interface Question {
-  image: string | undefined;
   id: number;
   name: string;
   type: string;
+  image: string | null;
   options: Option[];
+}
+
+interface Submission {
+  submission_id: number;
+  question_id: number;
+  question_name: string;
 }
 
 interface Test {
@@ -43,13 +53,21 @@ interface Test {
   end_date: string;
   course_id: number | null;
   course_name: string | null;
-  result_id: number | null;
-  total_questions: number | null;
-  attempted: number | null;
-  correct: number | null;
-  wrong: number | null;
-  final_score: string | null;
-  final_result: string | null;
+}
+
+interface TestResult {
+  totalQuestions: number;
+  attempted: number;
+  correct: number;
+  wrong: number;
+  finalScore: string;
+  finalResult: string;
+  message: string;
+}
+interface SelectedAnswer {
+  optionIds?: number[]; // For multiple-choice questions
+  optionId?: number | null; // For single-select questions
+  text?: string | null;
 }
 
 const TestScreen: React.FC = () => {
@@ -57,30 +75,24 @@ const TestScreen: React.FC = () => {
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [questions, setQuestions] = useState<Question[]>([]);
   const [selectedAnswers, setSelectedAnswers] = useState<{
-    [key: number]: { optionId: number | null; text: string | null };
+    [key: number]: SelectedAnswer;
   }>({});
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [testId, setTestId] = useState<number | null>(null);
+  const [test, setTest] = useState<Test | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [testResult, setTestResult] = useState<any>(null);
-  const [openTests, setOpenTests] = useState<Test[]>([]);
-  const [selectedTest, setSelectedTest] = useState<Test | null>(null);
-  const [showTestList, setShowTestList] = useState(false);
+  const [testResult, setTestResult] = useState<TestResult | null>(null);
   const [timerActive, setTimerActive] = useState(true);
   const [seenQuestions, setSeenQuestions] = useState<number[]>([]);
-  const videoRef = React.useRef<HTMLVideoElement>(null);
-  const [mediaStream, setMediaStream] = useState<MediaStream | null>(null);
-  const [cameraError, setCameraError] = useState<string | null>(null);
+  const [testStarted, setTestStarted] = useState(false);
+  const { testId } = useParams<{ testId: string }>();
+  // In your state declarations, keep these:
 
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
-  const axiosConfig = { headers: { token: token } };
+  const axiosConfig = { headers: { token: token || "" } };
 
-  useEffect(() => {
-    fetchTestStatus();
-  }, []);
-
+  // Prevent context menu and tab switching
   useEffect(() => {
     const handleContextMenu = (e: MouseEvent) => e.preventDefault();
     const handleBlur = () => {
@@ -96,131 +108,71 @@ const TestScreen: React.FC = () => {
     };
   }, []);
 
-  useEffect(() => {
-    const getCamera = async () => {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { width: 1280, height: 720 },
-        });
-
-        console.log("Stream active tracks:", stream.getTracks()); // Should show video track
-        setMediaStream(stream);
-
-        if (videoRef.current) {
-          videoRef.current.srcObject = stream;
-          console.log("Stream assigned to video element");
-
-          // Add event listeners for debugging
-          videoRef.current.onloadedmetadata = () => {
-            console.log("Video metadata loaded");
-          };
-          videoRef.current.onplay = () => {
-            console.log("Video started playing");
-          };
-          videoRef.current.onerror = (e) => {
-            console.error("Video error:", e);
-          };
-        }
-      } catch (err) {
-        console.error("Camera error:", err);
-      }
-    };
-
-    getCamera();
-
-    return () => {
-      mediaStream?.getTracks().forEach((track) => track.stop());
-    };
-  }, []);
-
   // Timer effect
   useEffect(() => {
     let timer: NodeJS.Timeout;
+
     if (timerActive && timeLeft > 0) {
       timer = setTimeout(() => {
-        setTimeLeft(timeLeft - 1);
+        setTimeLeft((prevTime) => prevTime - 1);
       }, 1000);
-    } else if (timeLeft === 0 && timerActive) {
-      // Auto submit when time runs out
-      handleAutoSubmit();
     }
-    return () => clearTimeout(timer);
-  }, [timeLeft, timerActive]);
-
-  useEffect(() => {
-    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
-      e.preventDefault();
-      e.returnValue = ""; // required for Chrome
-    };
-    window.addEventListener("beforeunload", handleBeforeUnload);
 
     return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
+      if (timer) clearTimeout(timer);
     };
-  }, []);
+  }, [timeLeft, timerActive]);
 
-  const handleAutoSubmit = async () => {
-    setTimerActive(false);
-    message.warning("Time's up! Submitting your test...");
-    await submitTest();
-  };
+  // Load test and questions
+  useEffect(() => {
+    const loadTest = async () => {
+      try {
+        setLoading(true);
 
-  const fetchTestStatus = () => {
-    setLoading(true);
-    axios
-      .get(
-        "http://localhost:3001/api/studentdashbaord/getStudentTestStatus",
-        axiosConfig
-      )
-      .then((response) => {
-        console.log("Test status response:", response.data);
-        const openTestsData = response.data?.data?.tests?.openTests || [];
-        setOpenTests(openTestsData);
-
-        if (openTestsData.length === 1) {
-          handleTestSelect(openTestsData[0]);
-        } else if (openTestsData.length > 1) {
-          setShowTestList(true);
-        } else {
-          message.info("No open tests available at this time");
+        if (!testId) {
+          throw new Error("Test ID not found");
         }
-        setLoading(false);
-      })
-      .catch((error) => {
-        console.error("Error fetching test status:", error);
-        setLoading(false);
-      });
-  };
 
-  const handleTestSelect = (test: Test) => {
-    setSelectedTest(test);
-    setTestId(test.test_id);
-    setLoading(true);
-    setShowTestList(false);
+        const submissionsResponse = await axios.get(
+          `http://localhost:3001/api/testsubmission/getTestQuestionSubmissions?test_id=${testId}`,
+          axiosConfig
+        );
 
-    axios
-      .get(
-        `http://localhost:3001/api/question/viewTestByID?id=${test.test_id}`,
-        axiosConfig
-      )
-      .then((response) => {
-        setQuestions(response.data.data.questions || []);
-        // Initialize selected answers with null values
+        const submissions = submissionsResponse.data?.submissions || [];
+
+        // 3. Fetch each question with its options
+        const questionsData: Question[] = [];
+        for (const submission of submissions) {
+          const questionResponse = await axios.get(
+            `http://localhost:3001/api/testsubmission/setQuestionStatusUnanswered?test_id=${testId}&question_id=${submission.question_id}`,
+            axiosConfig
+          );
+
+          questionsData.push(questionResponse.data.question);
+        }
+
+        setQuestions(questionsData);
+
+        // Initialize answers
         const initialAnswers: typeof selectedAnswers = {};
-        response.data.data.questions.forEach((q: Question) => {
+        questionsData.forEach((q: Question) => {
           initialAnswers[q.id] = { optionId: null, text: null };
         });
         setSelectedAnswers(initialAnswers);
-        // Set timer based on test duration (convert minutes to seconds)
-        setTimeLeft(test.duration * 60);
+
+        setTestStarted(true);
         setTimerActive(true);
+      } catch (error) {
+        console.error("Error loading test:", error);
+        message.error("Failed to load test");
+        navigate("/student/dashboard");
+      } finally {
         setLoading(false);
-      })
-      .catch((error) => {
-        console.error("Error fetching questions:", error);
-        setLoading(false);
-      });
-  };
+      }
+    };
+
+    loadTest();
+  }, [testId]);
 
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
@@ -229,18 +181,23 @@ const TestScreen: React.FC = () => {
       .toString()
       .padStart(2, "0")}`;
   };
-
   const submitTest = async () => {
     if (!testId) return;
 
     setSubmitting(true);
     const payload = {
-      test_id: testId,
-      answers: Object.entries(selectedAnswers).map(([questionId, answer]) => ({
-        question_id: parseInt(questionId),
-        option_id: answer.optionId,
-        text: answer.text,
-      })),
+      test_id: parseInt(testId),
+      answers: Object.entries(selectedAnswers).map(([questionId, answer]) => {
+        const question = questions.find((q) => q.id === parseInt(questionId));
+        const isMultipleChoice = question?.type === "multiple_choice";
+
+        return {
+          question_id: parseInt(questionId),
+          option_id: isMultipleChoice ? null : answer.optionId,
+          option_ids: isMultipleChoice ? answer.optionIds : null,
+          text: answer.text,
+        };
+      }),
     };
 
     try {
@@ -260,13 +217,23 @@ const TestScreen: React.FC = () => {
     }
   };
 
-  const saveAnswerToServer = async (questionId: number, answer: any) => {
+  const saveAnswerToServer = async (
+    questionId: number,
+    answer: SelectedAnswer
+  ) => {
+    if (!testId) return;
+
     try {
+      const question = questions.find((q) => q.id === questionId);
+      const isMultipleChoice = question?.type === "multiple_choice";
+
       await axios.post(
         "http://localhost:3001/api/testsubmission/submitTest",
         {
+          test_id: parseInt(testId),
           question_id: questionId,
-          option_id: answer.optionId,
+          option_id: isMultipleChoice ? null : answer.optionId,
+          option_ids: isMultipleChoice ? answer.optionIds : null,
           text: answer.text,
         },
         axiosConfig
@@ -281,14 +248,13 @@ const TestScreen: React.FC = () => {
     const answer = selectedAnswers[currentQ.id];
 
     if (answer.optionId || answer.text) {
-      await saveAnswerToServer(currentQ.id, answer); // ✅ save answer silently
+      await saveAnswerToServer(currentQ.id, answer);
     }
 
     if (!seenQuestions.includes(currentQ.id)) {
       setSeenQuestions([...seenQuestions, currentQ.id]);
     }
 
-    // ✅ Just move to the next question without submitting
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
     }
@@ -316,78 +282,12 @@ const TestScreen: React.FC = () => {
       <StudentLayoutWrapper pageTitle="Test">
         <div style={{ padding: "20px", textAlign: "center" }}>
           <Spin size="large" />
-          <Text>Loading...</Text>
+          <Text>Loading test information...</Text>
         </div>
       </StudentLayoutWrapper>
     );
   }
-
-  if (showTestList) {
-    return (
-      <StudentLayoutWrapper pageTitle="Available Tests">
-        <div style={{ padding: "20px" }}>
-          <Title
-            level={2}
-            style={{ textAlign: "center", marginBottom: "24px" }}
-          >
-            Available Tests
-          </Title>
-          <Row gutter={[16, 16]}>
-            {openTests.map((test) => (
-              <Col xs={24} sm={12} md={8} lg={6} key={test.test_id}>
-                <Card
-                  title={test.test_name}
-                  bordered={true}
-                  hoverable
-                  style={{ height: "100%" }}
-                  actions={[
-                    <Button
-                      type="primary"
-                      onClick={() => handleTestSelect(test)}
-                    >
-                      Start Test
-                    </Button>,
-                  ]}
-                >
-                  <Space direction="vertical" size="middle">
-                    <div>
-                      <Text strong>Duration: </Text>
-                      <Text>{test.duration} minutes</Text>
-                    </div>
-                    <div>
-                      <Text strong>Course: </Text>
-                      <Text>{test.course_name || "General"}</Text>
-                    </div>
-                    <div>
-                      <Text strong>Available Until: </Text>
-                      <Text>{formatDate(test.end_date)}</Text>
-                    </div>
-                    {test.total_questions && (
-                      <div>
-                        <Text strong>Questions: </Text>
-                        <Text>{test.total_questions}</Text>
-                      </div>
-                    )}
-                    {test.final_result && (
-                      <Tag
-                        color={
-                          test.final_result === "Pass" ? "green" : "volcano"
-                        }
-                      >
-                        {test.final_result}
-                      </Tag>
-                    )}
-                  </Space>
-                </Card>
-              </Col>
-            ))}
-          </Row>
-        </div>
-      </StudentLayoutWrapper>
-    );
-  }
-
-  if (openTests.length === 0) {
+  if (!testStarted && !loading && (!test || questions.length === 0)) {
     return (
       <StudentLayoutWrapper pageTitle="Test">
         <div
@@ -409,22 +309,22 @@ const TestScreen: React.FC = () => {
             }}
           >
             <Title level={2} style={{ color: "#fa8c16" }}>
-              No Open Tests Available
+              No Tests Available
             </Title>
             <Text type="secondary">
+              There are currently no tests available for you to take.
+              <br />
               Please check back later or contact your instructor.
             </Text>
+            <div style={{ marginTop: 20 }}>
+              <Button
+                type="primary"
+                onClick={() => navigate("/student/dashboard")}
+              >
+                Return to Dashboard
+              </Button>
+            </div>
           </Card>
-        </div>
-      </StudentLayoutWrapper>
-    );
-  }
-
-  if (!testId || questions.length === 0) {
-    return (
-      <StudentLayoutWrapper pageTitle="Test">
-        <div style={{ padding: "20px", textAlign: "center" }}>
-          <Text>No questions available for this test</Text>
         </div>
       </StudentLayoutWrapper>
     );
@@ -436,7 +336,6 @@ const TestScreen: React.FC = () => {
         <Row gutter={16}>
           <Col xs={24} lg={18}>
             <Card>
-              <Title level={2}>{selectedTest?.test_name}</Title>
               <div
                 style={{
                   display: "flex",
@@ -475,28 +374,111 @@ const TestScreen: React.FC = () => {
                     }}
                   />
                 )}
-                <Radio.Group
-                  onChange={(e) =>
-                    setSelectedAnswers({
-                      ...selectedAnswers,
-                      [currentQuestion.id]: {
-                        optionId: e.target.value,
-                        text: null,
-                      },
-                    })
-                  }
-                  value={selectedAnswers[currentQuestion.id]?.optionId || null}
-                >
-                  {currentQuestion?.options.map((option) => (
-                    <Radio
-                      key={option.id}
-                      value={option.id}
-                      style={{ display: "block", margin: "10px 0" }}
-                    >
-                      {option.option_text}
-                    </Radio>
-                  ))}
-                </Radio.Group>
+
+                {currentQuestion?.type === "text" ? (
+                  <TextArea
+                    placeholder="Type your answer here..."
+                    value={selectedAnswers[currentQuestion.id]?.text || ""}
+                    onChange={(e) =>
+                      setSelectedAnswers({
+                        ...selectedAnswers,
+                        [currentQuestion.id]: {
+                          optionId: null,
+                          text: e.target.value,
+                        },
+                      })
+                    }
+                    style={{ marginTop: 16 }}
+                    rows={4}
+                  />
+                ) : currentQuestion?.type === "radio" ? (
+                  <Radio.Group
+                    onChange={(e) =>
+                      setSelectedAnswers({
+                        ...selectedAnswers,
+                        [currentQuestion.id]: {
+                          optionId: e.target.value,
+                          text: null,
+                        },
+                      })
+                    }
+                    value={
+                      selectedAnswers[currentQuestion.id]?.optionId || null
+                    }
+                  >
+                    {currentQuestion?.options.map((option) => (
+                      <Radio
+                        key={option.id}
+                        value={option.id}
+                        style={{ display: "block", margin: "10px 0" }}
+                      >
+                        {option.option_text}
+                        {option.option_image && (
+                          <img
+                            src={option.option_image}
+                            alt="Option visual"
+                            style={{
+                              maxWidth: "100%",
+                              maxHeight: "100px",
+                              marginLeft: "10px",
+                            }}
+                          />
+                        )}
+                      </Radio>
+                    ))}
+                  </Radio.Group>
+                ) : currentQuestion?.type === "multiple_choice" ? (
+                  <div>
+                    {currentQuestion?.options.map((option) => (
+                      <div key={option.id} style={{ margin: "10px 0" }}>
+                        <Checkbox
+                          checked={
+                            selectedAnswers[
+                              currentQuestion.id
+                            ]?.optionIds?.includes(option.id) || false
+                          }
+                          onChange={(e) => {
+                            const currentSelected =
+                              selectedAnswers[currentQuestion.id]?.optionIds ||
+                              [];
+                            let newOptionIds;
+
+                            if (e.target.checked) {
+                              newOptionIds = [...currentSelected, option.id];
+                            } else {
+                              newOptionIds = currentSelected.filter(
+                                (id) => id !== option.id
+                              );
+                            }
+
+                            setSelectedAnswers({
+                              ...selectedAnswers,
+                              [currentQuestion.id]: {
+                                ...selectedAnswers[currentQuestion.id],
+                                optionIds: newOptionIds,
+                                optionId: null,
+                                text: null,
+                              },
+                            });
+                          }}
+                        >
+                          {option.option_text}
+                          {option.option_image && (
+                            <img
+                              src={option.option_image}
+                              alt="Option visual"
+                              style={{
+                                maxWidth: "100%",
+                                maxHeight: "100px",
+                                marginLeft: "10px",
+                              }}
+                            />
+                          )}
+                        </Checkbox>
+                      </div>
+                    ))}
+                  </div>
+                ) : null}
               </div>
 
               <Space>
@@ -528,7 +510,6 @@ const TestScreen: React.FC = () => {
             </Card>
           </Col>
 
-          {/* Question Number Grid */}
           <Col xs={24} lg={6}>
             <Card title="Answer Status" bordered>
               <Space direction="vertical" size="small">
@@ -560,55 +541,51 @@ const TestScreen: React.FC = () => {
                   marginTop: 20,
                 }}
               >
-                {Array.isArray(questions) &&
-                  questions.map((q, index) => {
-                    const answered = selectedAnswers[q.id]?.optionId !== null;
-                    const seen = seenQuestions.includes(q.id);
+                {questions.map((q, index) => {
+                  const answered =
+                    (selectedAnswers[q.id]?.optionIds?.length || 0) > 0 ||
+                    selectedAnswers[q.id]?.optionId !== null ||
+                    selectedAnswers[q.id]?.text !== null;
+                  const seen = seenQuestions.includes(q.id);
 
-                    let bgColor = "#faad14"; // Gold
-                    let textColor = "#000";
+                  let bgColor = "#faad14"; // Gold
+                  let textColor = "#000";
 
-                    if (answered) {
-                      bgColor = "#52c41a";
-                      textColor = "#fff";
-                    } else if (seen) {
-                      bgColor = "#1890ff";
-                      textColor = "#fff";
-                    }
+                  if (answered) {
+                    bgColor = "#52c41a";
+                    textColor = "#fff";
+                  } else if (seen) {
+                    bgColor = "#1890ff";
+                    textColor = "#fff";
+                  }
 
-                    return (
-                      <Button
-                        key={q.id}
-                        type="default"
-                        style={{
-                          backgroundColor: bgColor,
-                          color: textColor,
-                        }}
-                        onClick={() => {
-                          setCurrentQuestionIndex(index);
-                          if (!seenQuestions.includes(q.id)) {
-                            setSeenQuestions([...seenQuestions, q.id]);
-                          }
-                        }}
-                      >
-                        {index + 1}
-                      </Button>
-                    );
-                  })}
+                  return (
+                    <Button
+                      key={q.id}
+                      type="default"
+                      style={{
+                        backgroundColor: bgColor,
+                        color: textColor,
+                      }}
+                      onClick={() => {
+                        setCurrentQuestionIndex(index);
+                        if (!seenQuestions.includes(q.id)) {
+                          setSeenQuestions([...seenQuestions, q.id]);
+                        }
+                      }}
+                    >
+                      {index + 1}
+                    </Button>
+                  );
+                })}
               </div>
-            </Card>
-            <Card>
-              <Space direction="vertical" size="large">
-                <h2>Question {currentQuestionIndex + 1}</h2>
-              </Space>
             </Card>
           </Col>
         </Row>
 
-        {/* Result Modal stays unchanged */}
         <Modal
           title="Test Result"
-          visible={isModalVisible}
+          open={isModalVisible}
           onOk={handleModalOk}
           onCancel={handleModalOk}
           okText="OK"
@@ -651,20 +628,6 @@ const TestScreen: React.FC = () => {
           )}
         </Modal>
       </div>
-      {/* <video
-        ref={videoRef}
-        autoPlay
-        playsInline
-        muted
-        style={{
-          width: "100%",
-          height: "300px",
-          backgroundColor: "black", // Visible if video fails
-          border: "3px solid red", // Temporary border to confirm element bounds
-          objectFit: "cover", // Prevents letterboxing
-          display: "block", // Override any hidden states
-        }}
-      /> */}
     </StudentLayoutWrapper>
   );
 };

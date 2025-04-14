@@ -50,7 +50,7 @@ const App: React.FC = () => {
         {/* Student */}
 
         <Route path="/student/dashboard" element={<StudentDashoard />} />
-        <Route path="/student/TestScreen" element={<TestScreen />} />
+        <Route path="/student/TestScreen/:testId" element={<TestScreen />} />
         <Route path="/student/CompletedTest" element={<StudentCompletedTest />} />
 
         {/* Collage */}
