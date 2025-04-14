@@ -1,6 +1,13 @@
 import { Layout, Typography, Avatar, Dropdown, MenuProps, Space } from "antd";
-import { UserOutlined } from "@ant-design/icons";
-import { useState } from "react";
+import {
+  UserOutlined,
+  CheckOutlined,
+  EditOutlined,
+  LogoutOutlined,
+} from "@ant-design/icons";
+import { useState, useEffect } from "react";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
 
 const { Header } = Layout;
 const { Title, Text } = Typography;
@@ -9,42 +16,110 @@ interface AppHeaderProps {
   title: string;
   subtitle?: string;
   metaInfo?: string;
-  user?: {
-    name: string;
-    email: string;
-    role?: string;
-  };
 }
 
-const StudentAppHeader = ({
-  title,
-  subtitle = "INSTITUTION",
-  user,
-}: AppHeaderProps) => {
-  const [dropdownVisible, setDropdownVisible] = useState(false);
+interface UserProfile {
+  id: number;
+  firstname: string;
+  lastname: string;
+  email: string;
+  countrycode: string;
+  mobileno: string;
+  status: string;
+  role: string;
+}
 
-  const items: MenuProps["items"] = [
+const StudentAppHeader = ({ title, subtitle = "INSTITUTION" }: AppHeaderProps) => {
+  const [dropdownVisible, setDropdownVisible] = useState(false);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await axios.get(
+          "http://13.233.33.133:3001/api/users/myprofile",
+          {
+            headers: {
+              token: token || "",
+            },
+          }
+        );
+        setUserProfile(response.data);
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchUserProfile();
+  }, []);
+
+  const handleMenuClick: MenuProps["onClick"] = (e) => {
+    switch (e.key) {
+      case "edit-profile":
+        // Handle edit profile
+        break;
+      case "change-password":
+        // Handle change password
+        break;
+      case "logout":
+        localStorage.removeItem("token");
+        navigate("/login");
+        break;
+      default:
+        break;
+    }
+    setDropdownVisible(false);
+  };
+
+  const menuItems: MenuProps["items"] = [
     {
-      key: "profile",
+      key: "user-info",
       label: (
-        <div style={{ padding: "8px 12px" }}>
-          <Text strong>{user?.name || "User Name"}</Text>
-          <br />
-          <Text type="secondary">{user?.email || "user@example.com"}</Text>
-          {user?.role && (
-            <>
-              <br />
-              <Text type="secondary">{user.role}</Text>
-            </>
-          )}
-        </div>
+        <Space direction="vertical" size={0} style={{ padding: "12px 16px" }}>
+          <Text strong style={{ fontSize: 16 }}>
+            {userProfile
+              ? `${userProfile.firstname.charAt(
+                  0
+                )}${userProfile.lastname.charAt(0)}`
+              : "UU"}
+          </Text>
+          <Text strong>
+            {userProfile
+              ? `${userProfile.firstname} ${userProfile.lastname}`
+              : "User Name"}
+          </Text>
+          <Text type="secondary">
+            {userProfile?.email || "user@example.com"}
+          </Text>
+        </Space>
       ),
+      disabled: true,
+    },
+    { type: "divider" },
+    {
+      key: "edit-profile",
+      icon: <CheckOutlined />,
+      label: "Edit Profile",
+    },
+    {
+      key: "change-password",
+      icon: <EditOutlined />,
+      label: "Change Password",
+    },
+    { type: "divider" },
+    {
+      key: "logout",
+      icon: <LogoutOutlined />,
+      label: "Logout",
+      danger: true,
     },
   ];
-
-  function handleMenuClick(): void {
-    throw new Error("Function not implemented.");
-  }
 
   return (
     <Header
@@ -55,8 +130,7 @@ const StudentAppHeader = ({
         justifyContent: "space-between",
         alignItems: "center",
         height: "64px",
-        borderBottom: "1px solid #f0f0f0",
-        
+        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
       }}
     >
       <div style={{ display: "flex", flexDirection: "column" }}>
@@ -71,30 +145,38 @@ const StudentAppHeader = ({
         </Title>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-        <Dropdown
-          menu={{ items, onClick: handleMenuClick }}
-          placement="bottomRight"
-          arrow
-          open={dropdownVisible}
-          onOpenChange={(visible) => setDropdownVisible(visible)}
-        >
-          <Space style={{ cursor: "pointer" }}>
-            <Avatar
-              style={{
-                height: "40px",
-                width: "40px",
-                background: "grey",
-                display: "flex",
-                justifyContent: "center",
-                alignItems: "center",
-                fontSize: "20px",
-                color: "white",
-                cursor: "pointer",
-              }}
-              icon={<UserOutlined />}
-            />
-          </Space>
-        </Dropdown>
+        {!loading && (
+          <Dropdown
+            menu={{ items: menuItems, onClick: handleMenuClick }}
+            placement="bottomRight"
+            trigger={["click"]}
+            open={dropdownVisible}
+            onOpenChange={setDropdownVisible}
+            overlayStyle={{ minWidth: 220 }}
+          >
+            <Space style={{ cursor: "pointer", padding: "8px" }}>
+              <Avatar
+                size="large"
+                style={{
+                  backgroundColor: "grey",
+                  color: "white",
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  fontSize: "16px",
+                }}
+              >
+                {userProfile ? (
+                  `${userProfile.firstname.charAt(
+                    0
+                  )}${userProfile.lastname.charAt(0)}`
+                ) : (
+                  <UserOutlined />
+                )}
+              </Avatar>
+            </Space>
+          </Dropdown>
+        )}
       </div>
     </Header>
   );

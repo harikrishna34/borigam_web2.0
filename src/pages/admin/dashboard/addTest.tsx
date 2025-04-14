@@ -13,6 +13,7 @@ import {
   Space,
   Spin,
 } from "antd";
+import { Dayjs } from "dayjs";
 import LayoutWrapper from "../../../components/adminlayout/layoutWrapper";
 import { useNavigate } from "react-router-dom";
 import { DeleteOutlined } from "@ant-design/icons";
@@ -61,8 +62,9 @@ const AddTest = () => {
   const [testType, setTestType] = useState<string>("");
   const [selectedCourse, setSelectedCourse] = useState<number | null>(null);
   const [selectedBatches, setSelectedBatches] = useState<number[]>([]);
-  const [startDate, setStartDate] = useState<string>("");
-  const [endDate, setEndDate] = useState<string>("");
+  const [startDateTime, setStartDateTime] = useState<Dayjs | null>(null);
+  const [endDateTime, setEndDateTime] = useState<Dayjs | null>(null);
+
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
@@ -81,7 +83,7 @@ const AddTest = () => {
     try {
       setLoading(true);
       const response = await fetch(
-        `http://localhost:3001/api/question/getQuestionsByCourseId?id=${courseId}`,
+        `http://13.233.33.133:3001/api/question/getQuestionsByCourseId?id=${courseId}`,
         {
           headers: {
             "Content-Type": "application/json",
@@ -106,7 +108,7 @@ const AddTest = () => {
   const fetchCourses = async () => {
     try {
       const response = await fetch(
-        "http://localhost:3001/api/course/getCourses",
+        "http://13.233.33.133:3001/api/course/getCourses",
         {
           headers: {
             "Content-Type": "application/json",
@@ -127,7 +129,7 @@ const AddTest = () => {
   const fetchBatches = async () => {
     try {
       const response = await fetch(
-        "http://localhost:3001/api/course/viewAllBatches",
+        "http://13.233.33.133:3001/api/course/viewAllBatches",
         {
           headers: {
             "Content-Type": "application/json",
@@ -169,14 +171,6 @@ const AddTest = () => {
     );
   };
 
-  const formatDate = (date: any) => {
-    if (!date) return "";
-    const day = String(date.date()).padStart(2, "0");
-    const month = String(date.month() + 1).padStart(2, "0");
-    const year = date.year();
-    return `${day}-${month}-${year}`;
-  };
-
   const handleBatchChange = (selectedBatchIds: number[]) => {
     setSelectedBatches(selectedBatchIds);
   };
@@ -200,14 +194,16 @@ const AddTest = () => {
       message.error("Please select at least one batch");
       return;
     }
-    if (!startDate || !endDate) {
-      message.error("Please select both start and end dates");
+    if (!startDateTime || !endDateTime) {
+      message.error("Please select both start and end datetime");
       return;
     }
     if (selectedQuestions.length === 0) {
       message.error("Please select at least one question");
       return;
     }
+    const formattedStartDateTime = startDateTime.format("DD-MM-YYYY HH:mm:ss");
+    const formattedEndDateTime = endDateTime.format("DD-MM-YYYY HH:mm:ss");
 
     const duration = testType === "Mock Test" ? 180 : 30;
 
@@ -217,13 +213,13 @@ const AddTest = () => {
       course_id: selectedCourse,
       questions: selectedQuestions,
       batch_ids: selectedBatches,
-      start_date: startDate,
-      end_date: endDate,
+      start_date: formattedStartDateTime,
+      end_date: formattedEndDateTime,
     };
 
     try {
       const response = await fetch(
-        "http://localhost:3001/api/question/createTest",
+        "http://13.233.33.133:3001/api/question/createTest",
         {
           method: "POST",
           headers: {
@@ -247,7 +243,7 @@ const AddTest = () => {
     try {
       setLoading(true);
       const response = await fetch(
-        `http://localhost:3001/api/question/deleteQuestion?id=${questionId}`,
+        `http://13.233.33.133:3001/api/question/deleteQuestion?id=${questionId}`,
         {
           method: "GET",
           headers: {
@@ -273,14 +269,6 @@ const AddTest = () => {
   const handleModalOk = () => {
     setIsModalVisible(false);
     navigate("/dashboard");
-  };
-
-  const handleStartDateChange = (date: any) => {
-    setStartDate(formatDate(date));
-  };
-
-  const handleEndDateChange = (date: any) => {
-    setEndDate(formatDate(date));
   };
 
   return (
@@ -349,19 +337,21 @@ const AddTest = () => {
             </Select>
           </Form.Item>
 
-          <Form.Item label="Start Date:" required>
+          <Form.Item label="Start Date and Time:" required>
             <DatePicker
-              onChange={handleStartDateChange}
+              showTime
               style={{ width: "100%", marginBottom: "20px" }}
-              format="DD-MM-YYYY"
+              format="DD-MM-YYYY HH:mm:ss"
+              onChange={(value) => setStartDateTime(value)}
             />
           </Form.Item>
 
-          <Form.Item label="End Date:" required>
+          <Form.Item label="End Date and Time:" required>
             <DatePicker
-              onChange={handleEndDateChange}
+              showTime
               style={{ width: "100%", marginBottom: "20px" }}
-              format="DD-MM-YYYY"
+              format="DD-MM-YYYY HH:mm:ss"
+              onChange={(value) => setEndDateTime(value)}
             />
           </Form.Item>
 

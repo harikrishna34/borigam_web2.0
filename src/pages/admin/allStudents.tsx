@@ -52,7 +52,7 @@ const AllStudents: React.FC = () => {
 
   const fetchStudents = () => {
     setLoading(true);
-    fetch("http://localhost:3001/api/student/getAllStudents", {
+    fetch("http://13.233.33.133:3001/api/student/getAllStudents", {
       method: "GET",
       headers: {
         "Content-Type": "application/json",
@@ -108,7 +108,7 @@ const AllStudents: React.FC = () => {
 
       // Update student via API
       const response = await fetch(
-        `http://localhost:3001/api/student/updateStudent/${editingStudent?.student_id}`,
+        `http://13.233.33.133:3001/api/student/updateStudent/${editingStudent?.student_id}`,
         {
           method: "PUT",
           headers: {

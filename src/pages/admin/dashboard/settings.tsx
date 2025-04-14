@@ -80,7 +80,7 @@ const Settings: React.FC = () => {
     }
     try {
       const response = await fetch(
-        "http://localhost:3001/api/course/getCourses",
+        "http://13.233.33.133:3001/api/course/getCourses",
         {
           method: "GET",
           headers: {
@@ -240,7 +240,7 @@ const Settings: React.FC = () => {
   const fetchTests = async () => {
     try {
       const response = await fetch(
-        "http://localhost:3001/api/question/viewAllTests",
+        "http://13.233.33.133:3001/api/question/viewAllTests",
         {
           method: "GET",
           headers: {
@@ -261,7 +261,7 @@ const Settings: React.FC = () => {
   const fetchBatches = async () => {
     try {
       const response = await fetch(
-        "http://localhost:3001/api/course/viewAllBatches",
+        "http://13.233.33.133:3001/api/course/viewAllBatches",
         {
           headers: {
             "Content-Type": "application/json",
@@ -285,7 +285,7 @@ const Settings: React.FC = () => {
 
     try {
       const response = await fetch(
-        "http://localhost:3001/api/course/createCourse",
+        "http://13.233.33.133:3001/api/course/createCourse",
         {
           method: "POST",
           headers: {
@@ -379,14 +379,14 @@ const Settings: React.FC = () => {
           throw new Error("Invalid end_date format. Use DD-MM-YYYY.");
         }
 
-        url = `http://localhost:3001/api/course/updateBatch`;
+        url = `http://13.233.33.133:3001/api/course/updateBatch`;
         body = {
           ...body,
           start_date: editData.start_date,
           end_date: editData.end_date,
         };
       } else {
-        url = `http://localhost:3001/api/course/updateCourse`;
+        url = `http://13.233.33.133:3001/api/course/updateCourse`;
       }
 
       const response = await fetch(url, {
@@ -425,8 +425,8 @@ const Settings: React.FC = () => {
     try {
       const url =
         type === "course"
-          ? `http://localhost:3001/api/course/deleteCourse?id=${id}`
-          : `http://localhost:3001/api/course/deleteBatch?id=${id}`;
+          ? `http://13.233.33.133:3001/api/course/deleteCourse?id=${id}`
+          : `http://13.233.33.133:3001/api/course/deleteBatch?id=${id}`;
 
       const response = await fetch(url, {
         method: "GET", // Changed from DELETE to GET
@@ -501,7 +501,7 @@ const Settings: React.FC = () => {
 
     try {
       const response = await fetch(
-        "http://localhost:3001/api/course/createBatch",
+        "http://13.233.33.133:3001/api/course/createBatch",
         {
           method: "POST",
           headers: {
@@ -599,7 +599,7 @@ const Settings: React.FC = () => {
           />
         </Card>
 
-        <Card
+        {/* <Card
           style={{
             width: "49%",
             borderRadius: "10px",
@@ -634,7 +634,7 @@ const Settings: React.FC = () => {
               )}
             </TabPane>
           </Tabs>
-        </Card>
+        </Card> */}
       </div>
 
       {/* Course Modal */}

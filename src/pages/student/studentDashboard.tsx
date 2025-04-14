@@ -13,6 +13,7 @@ import {
   Space,
   List,
   message,
+  Tooltip,
 } from "antd";
 import StudentLayoutWrapper from "../../components/studentlayout/studentlayoutWrapper";
 import { useNavigate } from "react-router-dom";
@@ -83,7 +84,7 @@ const StudentDashboard: React.FC = () => {
       setLoading(true);
       setError(null);
       const response = await fetch(
-        "http://localhost:3001/api/studentdashbaord/getStudentTestStatus",
+        "http://13.233.33.133:3001/api/studentdashbaord/getStudentTestStatus",
         {
           method: "GET",
           headers: {
@@ -122,7 +123,7 @@ const StudentDashboard: React.FC = () => {
     try {
       setStartingTest(true);
       const response = await fetch(
-        `http://localhost:3001/api/testsubmission/startTest`,
+        `http://13.233.33.133:3001/api/testsubmission/startTest`,
         {
           method: "POST",
           headers: {
@@ -220,6 +221,13 @@ const StudentDashboard: React.FC = () => {
     );
   }
 
+  function isTestActive(test: Test) {
+    const currentTime = Date.now() / 1000; // Current time in seconds
+    const startTime = parseInt(test.start_date);
+    const endTime = parseInt(test.end_date);
+    return currentTime >= startTime && currentTime <= endTime;
+  }
+
   return (
     <StudentLayoutWrapper pageTitle={"BORIGAM / Student"}>
       <div style={{ marginBottom: "20px" }}>
@@ -306,13 +314,22 @@ const StudentDashboard: React.FC = () => {
                   <List.Item
                     style={{ padding: "16px 0" }}
                     actions={[
-                      <Button
-                        type="primary"
-                        loading={startingTest}
-                        onClick={() => handleStartTest(test.test_id)}
+                      <Tooltip
+                        title={
+                          !isTestActive(test)
+                            ? "This test is no longer available"
+                            : ""
+                        }
                       >
-                        Start Test
-                      </Button>,
+                        <Button
+                          type="primary"
+                          loading={startingTest}
+                          onClick={() => handleStartTest(test.test_id)}
+                          disabled={!isTestActive(test)}
+                        >
+                          Start Test
+                        </Button>
+                      </Tooltip>,
                     ]}
                   >
                     <List.Item.Meta
@@ -348,6 +365,11 @@ const StudentDashboard: React.FC = () => {
                               </Text>
                             </Col>
                           </Row>
+                          {!isTestActive(test) && (
+                            <Tag color="red" style={{ marginTop: 8 }}>
+                              Expired
+                            </Tag>
+                          )}
                           {test.final_result && (
                             <Tag
                               color={

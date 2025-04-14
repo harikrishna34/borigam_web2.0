@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Form, Input, Button, Row, Col, Typography, message , Alert} from "antd";
+import { Form, Input, Button, Row, Col, Typography, message} from "antd";
 import { UserOutlined, LockOutlined } from "@ant-design/icons";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -11,7 +11,7 @@ const { Title } = Typography;
 
 const Login = () => {
   const [form] = Form.useForm();
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(false); // Added loading state
   const navigate = useNavigate();
 
   const handleFinish = async (values: {
@@ -28,16 +28,14 @@ const Login = () => {
       const response = await axios.post(Loginapi(), payload);
 
       if (response.data.token) {
-        // Store token in localStorage
         localStorage.setItem("token", response.data.token);
 
-        // Optional: Store user data if available
         if (response.data.user) {
           localStorage.setItem("userData", JSON.stringify(response.data.user));
         }
 
         message.success("Login successful!");
-        alert("Succesfully logged in");
+
         if (
           values.username === "admin@gmail.com" &&
           values.password === "123456"
@@ -47,7 +45,7 @@ const Login = () => {
         }
 
         if (
-          values.username === "College@gmail.com" &&
+          values.username === "college@gmail.com" &&
           values.password === "123456"
         ) {
           navigate("/college/dashboard");

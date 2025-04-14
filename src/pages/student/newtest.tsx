@@ -10,7 +10,6 @@ import {
   Row,
   Col,
   Space,
-  Tag,
   Spin,
   Divider,
   Checkbox,
@@ -35,13 +34,9 @@ interface Question {
   name: string;
   type: string;
   image: string | null;
+  total_marks: number; // Add this
+  negative_marks: number; // Add this
   options: Option[];
-}
-
-interface Submission {
-  submission_id: number;
-  question_id: number;
-  question_name: string;
 }
 
 interface Test {
@@ -79,7 +74,7 @@ const TestScreen: React.FC = () => {
   }>({});
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
-  const [test, setTest] = useState<Test | null>(null);
+  const [test] = useState<Test | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [testResult, setTestResult] = useState<TestResult | null>(null);
   const [timerActive, setTimerActive] = useState(true);
@@ -134,7 +129,7 @@ const TestScreen: React.FC = () => {
         }
 
         const submissionsResponse = await axios.get(
-          `http://localhost:3001/api/testsubmission/getTestQuestionSubmissions?test_id=${testId}`,
+          `http://13.233.33.133:3001/api/testsubmission/getTestQuestionSubmissions?test_id=${testId}`,
           axiosConfig
         );
 
@@ -144,7 +139,7 @@ const TestScreen: React.FC = () => {
         const questionsData: Question[] = [];
         for (const submission of submissions) {
           const questionResponse = await axios.get(
-            `http://localhost:3001/api/testsubmission/setQuestionStatusUnanswered?test_id=${testId}&question_id=${submission.question_id}`,
+            `http://13.233.33.133:3001/api/testsubmission/setQuestionStatusUnanswered?test_id=${testId}&question_id=${submission.question_id}`,
             axiosConfig
           );
 
@@ -185,16 +180,18 @@ const TestScreen: React.FC = () => {
     if (!testId) return;
 
     setSubmitting(true);
+
     const payload = {
       test_id: parseInt(testId),
       answers: Object.entries(selectedAnswers).map(([questionId, answer]) => {
         const question = questions.find((q) => q.id === parseInt(questionId));
-        const isMultipleChoice = question?.type === "multiple_choice";
 
         return {
           question_id: parseInt(questionId),
-          option_id: isMultipleChoice ? null : answer.optionId,
-          option_ids: isMultipleChoice ? answer.optionIds : null,
+          option_ids:
+            question?.type === "multiple_choice" ? answer.optionIds : null,
+          option_id:
+            question?.type !== "multiple_choice" ? answer.optionId : null,
           text: answer.text,
         };
       }),
@@ -202,7 +199,7 @@ const TestScreen: React.FC = () => {
 
     try {
       const response = await axios.post(
-        "http://localhost:3001/api/testsubmission/submitTest",
+        "http://13.233.33.133:3001/api/testsubmission/submitTest",
         payload,
         axiosConfig
       );
@@ -228,13 +225,17 @@ const TestScreen: React.FC = () => {
       const isMultipleChoice = question?.type === "multiple_choice";
 
       await axios.post(
-        "http://localhost:3001/api/testsubmission/submitTest",
+        "http://13.233.33.133:3001/api/testsubmission/submitTest",
         {
           test_id: parseInt(testId),
-          question_id: questionId,
-          option_id: isMultipleChoice ? null : answer.optionId,
-          option_ids: isMultipleChoice ? answer.optionIds : null,
-          text: answer.text,
+          answers: [
+            {
+              question_id: questionId,
+              option_ids: isMultipleChoice ? answer.optionIds : null,
+              option_id: !isMultipleChoice ? answer.optionId : null,
+              text: answer.text,
+            },
+          ],
         },
         axiosConfig
       );
@@ -269,10 +270,6 @@ const TestScreen: React.FC = () => {
   const handleModalOk = () => {
     setIsModalVisible(false);
     navigate("/student/dashboard");
-  };
-
-  const formatDate = (timestamp: string) => {
-    return new Date(parseInt(timestamp) * 1000).toLocaleString();
   };
 
   const currentQuestion: Question | undefined = questions[currentQuestionIndex];
@@ -579,6 +576,48 @@ const TestScreen: React.FC = () => {
                   );
                 })}
               </div>
+            </Card>
+            <Card title="Marks Information" bordered style={{ marginTop: 20 }}>
+              <Space
+                direction="vertical"
+                size="middle"
+                style={{ width: "100%" }}
+              >
+                <div
+                  style={{
+                    border: "2px solid #52c41a", // Green border
+                    borderRadius: "4px",
+                    padding: "8px 16px",
+                    backgroundColor: "#f6ffed", // Light green background
+                    textAlign: "center",
+                    width: "100%",
+                  }}
+                >
+                  <Text strong style={{ color: "#52c41a" }}>
+                    Total Marks:
+                  </Text>{" "}
+                  <Text strong style={{ fontSize: "16px", marginLeft: 8 }}>
+                    {currentQuestion?.total_marks}
+                  </Text>
+                </div>
+                <div
+                  style={{
+                    border: "2px solid #ff4d4f", // Red border
+                    borderRadius: "4px",
+                    padding: "8px 16px",
+                    backgroundColor: "#fff2f0", // Light red background
+                    textAlign: "center",
+                    width: "100%",
+                  }}
+                >
+                  <Text strong style={{ color: "#ff4d4f" }}>
+                    Negative Marks:
+                  </Text>{" "}
+                  <Text strong style={{ fontSize: "16px", marginLeft: 8 }}>
+                    {currentQuestion?.negative_marks}
+                  </Text>
+                </div>
+              </Space>
             </Card>
           </Col>
         </Row>
