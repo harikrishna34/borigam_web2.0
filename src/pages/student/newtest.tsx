@@ -105,10 +105,11 @@ const TestScreen: React.FC = () => {
 
   // Timer effect
   useEffect(() => {
-    let timer: NodeJS.Timeout;
+
+    let timer : number | undefined = undefined;
 
     if (timerActive && timeLeft > 0) {
-      timer = setTimeout(() => {
+      timer = window.setTimeout(() => {
         setTimeLeft((prevTime) => prevTime - 1);
       }, 1000);
     }
