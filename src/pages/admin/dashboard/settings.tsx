@@ -2,9 +2,9 @@ import { useEffect, useState } from "react";
 import {
   Card,
   Button,
-  Typography,
-  List,
-  Tabs,
+  // Typography,
+  // List,
+  // Tabs,
   Modal,
   Input,
   Form,
@@ -17,7 +17,7 @@ import { Table } from "antd";
 import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import LayoutWrapper from "../../../components/adminlayout/layoutWrapper";
 import moment from "moment";
-const { TabPane } = Tabs;
+// const { TabPane } = Tabs;
 
 interface Course {
   id: number;
@@ -62,7 +62,7 @@ interface EditData {
 
 const Settings: React.FC = () => {
   const [courses, setCourses] = useState<Course[]>([]);
-  const [tests, setTests] = useState<Test[]>([]);
+  const [, setTests] = useState<Test[]>([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [courseName, setCourseName] = useState("");
 
@@ -452,40 +452,6 @@ const Settings: React.FC = () => {
       message.error(`Error deleting ${type}`);
     }
   };
-
-  const renderTests = (filteredTests: Test[]) =>
-    Array.isArray(filteredTests) &&
-    filteredTests.map((test) => (
-      <div key={test.test_id} style={{ marginBottom: "20px" }}>
-        <Typography.Title level={5}>{test.test_name}</Typography.Title>
-        <List
-          bordered
-          dataSource={test.questions}
-          renderItem={(question) => (
-            <List.Item>
-              <div>
-                <Typography.Text strong>{question.name}</Typography.Text>
-                {Array.isArray(question.options) &&
-                  question.options.length > 0 && (
-                    <List
-                      size="small"
-                      dataSource={question.options}
-                      renderItem={(option) => (
-                        <List.Item>
-                          {option.option_text}{" "}
-                          {option.is_correct && (
-                            <strong>(Correct Answer)</strong>
-                          )}
-                        </List.Item>
-                      )}
-                    />
-                  )}
-              </div>
-            </List.Item>
-          )}
-        />
-      </div>
-    ));
 
   const handleAddBatch = async () => {
     const token = localStorage.getItem("token");
