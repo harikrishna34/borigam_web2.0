@@ -45,19 +45,21 @@ const SignUpForm: React.FC = () => {
         "http://13.233.33.133:3001/api/users/createUser",
         payload
       );
+      
+      alert(response.data.message);
+
+      navigate("/login")
+
 
       if (response.data.success) {
-        // Show alert dialog
+        alert("Created User Success");
         const userConfirmed = window.confirm(
           "User created successfully!\n\nClick OK to go to login page."
         );
         if (userConfirmed) {
           form.resetFields();
-         
-          
         }
-        alert("Created User Success");
-        navigate("/");
+
       } else {
         message.error(response.data.message || "Failed to create user");
       }
@@ -167,7 +169,7 @@ const SignUpForm: React.FC = () => {
           >
             <Select
               mode="multiple" // Allows selecting multiple roles
-              placeholder="Select role(s)"  
+              placeholder="Select role(s)"
               size="large"
               suffixIcon={<SolutionOutlined />}
             >

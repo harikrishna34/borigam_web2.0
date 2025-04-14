@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Form, Input, Button, Row, Col, Typography, message} from "antd";
+import { Form, Input, Button, Row, Col, Typography, message } from "antd";
 import { UserOutlined, LockOutlined } from "@ant-design/icons";
 import axios from "axios";
 import { useNavigate } from "react-router-dom";
@@ -30,29 +30,27 @@ const Login = () => {
       if (response.data.token) {
         localStorage.setItem("token", response.data.token);
 
+        const userRole = response.data.profile.role?.toLowerCase();
+
+        if (userRole === "admin") {
+          navigate("/college/dashboard");
+        }
+        if (userRole === "student") {
+          navigate("/student/dashboard");
+        }
+        if (userRole === "superadmin") {
+          navigate("/dashboard");
+        } 
+
         if (response.data.user) {
-          localStorage.setItem("userData", JSON.stringify(response.data.user));
+          localStorage.setItem(
+            "userData",
+            JSON.stringify(response.data.profile)
+          );
+
         }
 
         message.success("Login successful!");
-
-        if (
-          values.username === "admin@gmail.com" &&
-          values.password === "123456"
-        ) {
-          navigate("/dashboard");
-          return;
-        }
-
-        if (
-          values.username === "college@gmail.com" &&
-          values.password === "123456"
-        ) {
-          navigate("/college/dashboard");
-          return;
-        }
-
-        navigate("/student/dashboard");
       } else {
         throw new Error("No token received");
       }
