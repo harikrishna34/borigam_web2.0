@@ -194,22 +194,28 @@ const StudentCompletedTest = () => {
       render: (record: Answer) => (
         <Space direction="vertical">
           {record.options.map((option) => {
+            // Check if this option was submitted by the student
+            const isSubmitted = record.submitted_option_id === option.option_id;
+            // Check if this option is correct
+            const isCorrectOption = option.is_correct;
+            
             let color = "default";
             let style: React.CSSProperties = {};
-            const isSubmitted = option.option_id === record.submitted_option_id;
-
+            
             if (isSubmitted) {
+              // Student's answer - show in green if correct, red if wrong
               color = record.is_correct ? "green" : "red";
               style = { fontWeight: "bold" };
-            } else if (option.is_correct && !record.is_correct) {
+            } else if (isCorrectOption) {
+              // Correct answer (not selected by student) - show in blue
               color = "blue";
             }
-
+  
             return (
               <Tag color={color} style={style} key={option.option_id}>
                 {option.option_text}
                 {isSubmitted && " (Your Answer)"}
-                {option.is_correct && !isSubmitted && " (Correct Answer)"}
+                {isCorrectOption && !isSubmitted && " (Correct Answer)"}
               </Tag>
             );
           })}

@@ -50,15 +50,15 @@ interface Test {
   course_name: string | null;
 }
 
-interface TestResult {
-  totalQuestions: number;
-  attempted: number;
-  correct: number;
-  wrong: number;
-  finalScore: string;
-  finalResult: string;
-  message: string;
-}
+// interface TestResult {
+//   totalQuestions: number;
+//   attempted: number;
+//   correct: number;
+//   wrong: number;
+//   finalScore: string;
+//   finalResult: string;
+//   message: string;
+// }
 interface SelectedAnswer {
   optionIds?: number[]; // For multiple-choice questions
   optionId?: number | null; // For single-select questions
@@ -76,16 +76,20 @@ const TestScreen: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [test] = useState<Test | null>(null);
   const [isModalVisible, setIsModalVisible] = useState(false);
-  const [testResult, setTestResult] = useState<TestResult | null>(null);
+  // const [testResult, setTestResult] = useState<TestResult | null>(null);
   const [timerActive, setTimerActive] = useState(true);
   const [seenQuestions, setSeenQuestions] = useState<number[]>([]);
   const [testStarted, setTestStarted] = useState(false);
   const { testId } = useParams<{ testId: string }>();
+  const [isFinalModalVisible, setIsFinalModalVisible] = useState(false);
+  const [finalResult, setFinalResult] = useState<any>(null);
   // In your state declarations, keep these:
 
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
   const axiosConfig = { headers: { token: token || "" } };
+
+  const STORAGE_KEY = `test_answers_${testId}`;
 
   // Prevent context menu and tab switching
   useEffect(() => {
@@ -105,11 +109,10 @@ const TestScreen: React.FC = () => {
 
   // Timer effect
   useEffect(() => {
-
-    let timer : number | undefined = undefined;
+    let timer: NodeJS.Timeout;
 
     if (timerActive && timeLeft > 0) {
-      timer = window.setTimeout(() => {
+      timer = setTimeout(() => {
         setTimeLeft((prevTime) => prevTime - 1);
       }, 1000);
     }
@@ -136,26 +139,37 @@ const TestScreen: React.FC = () => {
 
         const submissions = submissionsResponse.data?.submissions || [];
 
-        // 3. Fetch each question with its options
         const questionsData: Question[] = [];
         for (const submission of submissions) {
           const questionResponse = await axios.get(
             `http://13.233.33.133:3001/api/testsubmission/setQuestionStatusUnanswered?test_id=${testId}&question_id=${submission.question_id}`,
             axiosConfig
           );
-
           questionsData.push(questionResponse.data.question);
         }
 
         setQuestions(questionsData);
 
-        // Initialize answers
-        const initialAnswers: typeof selectedAnswers = {};
-        questionsData.forEach((q: Question) => {
-          initialAnswers[q.id] = { optionId: null, text: null };
-        });
-        setSelectedAnswers(initialAnswers);
+        // Try to load answers from localStorage
+        const savedAnswers = localStorage.getItem(STORAGE_KEY);
+        let initialAnswers: typeof selectedAnswers = {};
 
+        if (savedAnswers) {
+          try {
+            initialAnswers = JSON.parse(savedAnswers);
+          } catch (e) {
+            console.error("Failed to parse saved answers", e);
+          }
+        }
+
+        // Initialize any missing answers
+        questionsData.forEach((q: Question) => {
+          if (!initialAnswers[q.id]) {
+            initialAnswers[q.id] = { optionId: null, text: null };
+          }
+        });
+
+        setSelectedAnswers(initialAnswers);
         setTestStarted(true);
         setTimerActive(true);
       } catch (error) {
@@ -170,49 +184,18 @@ const TestScreen: React.FC = () => {
     loadTest();
   }, [testId]);
 
+  useEffect(() => {
+    if (Object.keys(selectedAnswers).length > 0) {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(selectedAnswers));
+    }
+  }, [selectedAnswers]);
+
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
     const secs = seconds % 60;
     return `${minutes.toString().padStart(2, "0")}:${secs
       .toString()
       .padStart(2, "0")}`;
-  };
-  const submitTest = async () => {
-    if (!testId) return;
-
-    setSubmitting(true);
-
-    const payload = {
-      test_id: parseInt(testId),
-      answers: Object.entries(selectedAnswers).map(([questionId, answer]) => {
-        const question = questions.find((q) => q.id === parseInt(questionId));
-
-        return {
-          question_id: parseInt(questionId),
-          option_ids:
-            question?.type === "multiple_choice" ? answer.optionIds : null,
-          option_id:
-            question?.type !== "multiple_choice" ? answer.optionId : null,
-          text: answer.text,
-        };
-      }),
-    };
-
-    try {
-      const response = await axios.post(
-        "http://13.233.33.133:3001/api/testsubmission/submitTest",
-        payload,
-        axiosConfig
-      );
-      setTestResult(response.data.finalSummary);
-      setIsModalVisible(true);
-      setTimerActive(false);
-    } catch (error) {
-      message.error("Error submitting test");
-      console.error("Submission error:", error);
-    } finally {
-      setSubmitting(false);
-    }
   };
 
   const saveAnswerToServer = async (
@@ -223,25 +206,56 @@ const TestScreen: React.FC = () => {
 
     try {
       const question = questions.find((q) => q.id === questionId);
-      const isMultipleChoice = question?.type === "multiple_choice";
+      if (!question) return;
 
-      await axios.post(
+      // Determine the question type
+      const isMultipleChoice = question.type === "multiple_choice";
+      const isSingleChoice = question.type === "radio";
+      const isText = question.type === "text";
+
+      // Prepare the answer payload
+      const answerPayload: any = {
+        question_id: questionId,
+      };
+
+      if (isText) {
+        answerPayload.text = answer.text || "";
+      } else {
+        answerPayload.text = null;
+        if (isMultipleChoice) {
+          answerPayload.option_id = answer.optionIds || [];
+        } else if (isSingleChoice) {
+          answerPayload.option_id = answer.optionId || null;
+        }
+      }
+
+      const payload = {
+        test_id: parseInt(testId),
+        answers: [answerPayload],
+      };
+
+      const response = await axios.post(
         "http://13.233.33.133:3001/api/testsubmission/submitTest",
-        {
-          test_id: parseInt(testId),
-          answers: [
-            {
-              question_id: questionId,
-              option_ids: isMultipleChoice ? answer.optionIds : null,
-              option_id: !isMultipleChoice ? answer.optionId : null,
-              text: answer.text,
-            },
-          ],
-        },
+        payload,
         axiosConfig
       );
+
+      // Check if all questions are answered
+      if (response.data.pendingsubmission?.unanswered === 1) {
+        // Submit final result using GET
+        const finalResponse = await axios.get(
+          `http://13.233.33.133:3001/api/testsubmission/submitFinalResult?test_id=${testId}`,
+          axiosConfig
+        );
+        setFinalResult(finalResponse.data.result);
+        setIsFinalModalVisible(true);
+      }
+
+      return response.data;
     } catch (error) {
-      console.error("Failed to save answer", error);
+      console.error("Failed to save answer:", error);
+      message.error("Failed to save answer");
+      throw error;
     }
   };
 
@@ -249,7 +263,8 @@ const TestScreen: React.FC = () => {
     const currentQ = questions[currentQuestionIndex];
     const answer = selectedAnswers[currentQ.id];
 
-    if (answer.optionId || answer.text) {
+    // Submit answer if any option is selected or text is entered
+    if (answer?.optionId || answer?.optionIds || answer?.text) {
       await saveAnswerToServer(currentQ.id, answer);
     }
 
@@ -259,6 +274,38 @@ const TestScreen: React.FC = () => {
 
     if (currentQuestionIndex < questions.length - 1) {
       setCurrentQuestionIndex(currentQuestionIndex + 1);
+    } else {
+      // Check if all questions are answered
+      const unanswered = questions.filter(
+        (q) =>
+          !selectedAnswers[q.id]?.optionId &&
+          !selectedAnswers[q.id]?.optionIds?.length &&
+          !selectedAnswers[q.id]?.text
+      ).length;
+
+      if (unanswered === 1) {
+        // All questions answered - submit final result using GET
+        try {
+          setSubmitting(true);
+          const response = await axios.get(
+            `http://13.233.33.133:3001/api/testsubmission/submitFinalResult?test_id=${testId}`,
+            axiosConfig
+          );
+          setFinalResult(response.data.result);
+          setIsFinalModalVisible(true);
+          localStorage.removeItem(STORAGE_KEY);
+        } catch (error) {
+          console.error("Failed to submit final result:", error);
+          message.error("Failed to submit final result");
+        } finally {
+          setSubmitting(false);
+        }
+      } else {
+        // Show regular completion modal
+        setIsModalVisible(true);
+        setTimerActive(false);
+        localStorage.removeItem(STORAGE_KEY);
+      }
     }
   };
 
@@ -268,10 +315,14 @@ const TestScreen: React.FC = () => {
     }
   };
 
-  const handleModalOk = () => {
-    setIsModalVisible(false);
-    navigate("/student/dashboard");
-  };
+  useEffect(() => {
+    return () => {
+      // Only clear if test is not completed
+      if (!isModalVisible) {
+        localStorage.removeItem(STORAGE_KEY);
+      }
+    };
+  }, [isModalVisible]);
 
   const currentQuestion: Question | undefined = questions[currentQuestionIndex];
 
@@ -491,7 +542,7 @@ const TestScreen: React.FC = () => {
                   type="primary"
                   onClick={
                     currentQuestionIndex === questions.length - 1
-                      ? submitTest
+                      ? handleNext
                       : handleNext
                   }
                   disabled={submitting}
@@ -597,7 +648,7 @@ const TestScreen: React.FC = () => {
                   <Text strong style={{ color: "#52c41a" }}>
                     Total Marks:
                   </Text>{" "}
-                  <Text strong style={{ fontSize: "16px", marginLeft: 8 }}>
+                  <Text strong style={{ fontSize: "16px" }}>
                     {currentQuestion?.total_marks}
                   </Text>
                 </div>
@@ -614,7 +665,7 @@ const TestScreen: React.FC = () => {
                   <Text strong style={{ color: "#ff4d4f" }}>
                     Negative Marks:
                   </Text>{" "}
-                  <Text strong style={{ fontSize: "16px", marginLeft: 8 }}>
+                  <Text strong style={{ fontSize: "16px" }}>
                     {currentQuestion?.negative_marks}
                   </Text>
                 </div>
@@ -623,7 +674,7 @@ const TestScreen: React.FC = () => {
           </Col>
         </Row>
 
-        <Modal
+        {/* <Modal
           title="Test Result"
           open={isModalVisible}
           onOk={handleModalOk}
@@ -656,6 +707,82 @@ const TestScreen: React.FC = () => {
                   key: "6",
                   label: "Final Result",
                   value: testResult.finalResult,
+                },
+              ]}
+              columns={[
+                { title: "Details", dataIndex: "label", key: "label" },
+                { title: "Result", dataIndex: "value", key: "value" },
+              ]}
+              pagination={false}
+              bordered
+            />
+          )}
+        </Modal> */}
+        <Modal
+          title="Test Completed"
+          open={isFinalModalVisible}
+          onOk={() => {
+            setIsFinalModalVisible(false);
+            navigate("/student/dashboard");
+          }}
+          footer={[
+            <Button
+              key="submit"
+              type="primary"
+              onClick={() => {
+                setIsFinalModalVisible(false);
+                navigate("/student/dashboard");
+              }}
+            >
+              OK
+            </Button>,
+          ]}
+          width={700}
+        >
+          {finalResult && (
+            <Table
+              dataSource={[
+                {
+                  key: "1",
+                  label: "Total Questions",
+                  value: finalResult.total_questions,
+                },
+                { key: "2", label: "Attempted", value: finalResult.attempted },
+                {
+                  key: "3",
+                  label: "Unattempted",
+                  value: finalResult.unattempted,
+                },
+                {
+                  key: "4",
+                  label: "Correct Answers",
+                  value: finalResult.correct,
+                },
+                { key: "5", label: "Wrong Answers", value: finalResult.wrong },
+                {
+                  key: "6",
+                  label: "Final Score",
+                  value: `${finalResult.final_score}%`,
+                },
+                {
+                  key: "7",
+                  label: "Final Result",
+                  value: finalResult.final_result,
+                },
+                {
+                  key: "8",
+                  label: "Marks Awarded",
+                  value: finalResult.marks_awarded,
+                },
+                {
+                  key: "9",
+                  label: "Marks Deducted",
+                  value: finalResult.marks_deducted,
+                },
+                {
+                  key: "10",
+                  label: "Total Marks Awarded",
+                  value: finalResult.total_marks_awarded,
                 },
               ]}
               columns={[
