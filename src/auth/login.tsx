@@ -120,7 +120,7 @@ const Login = () => {
         {/* Footer Links */}
         <Row justify="space-between" className="signin-footer">
           <Col>
-            <Typography.Link className="forgot">
+            <Typography.Link className="forgot" onClick={() => navigate("/forgotpassword")}>
               Forgot Password ?
             </Typography.Link>
           </Col>
