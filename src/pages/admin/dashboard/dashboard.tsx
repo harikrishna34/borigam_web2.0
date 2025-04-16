@@ -367,6 +367,12 @@ const Dashboard = () => {
             >
               Completed
             </Button>
+            <Button
+              style={{ width: "120px", height: "45px", fontSize: "14px" }}
+              onClick={() => navigate("/dashboard/upcomingtest")}
+            >
+              Upcoming
+            </Button>
           </div>
         </Card>
 

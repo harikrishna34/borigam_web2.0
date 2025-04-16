@@ -17,6 +17,7 @@ import { Table } from "antd";
 import { EditOutlined, DeleteOutlined } from "@ant-design/icons";
 import LayoutWrapper from "../../../components/adminlayout/layoutWrapper";
 import moment from "moment";
+import { useNavigate } from "react-router-dom";
 // const { TabPane } = Tabs;
 
 interface Course {
@@ -61,6 +62,7 @@ interface EditData {
 }
 
 const Settings: React.FC = () => {
+  const navigate = useNavigate();
   const [courses, setCourses] = useState<Course[]>([]);
   const [, setTests] = useState<Test[]>([]);
   const [isModalVisible, setIsModalVisible] = useState(false);
@@ -234,6 +236,18 @@ const Settings: React.FC = () => {
             />
           </Popconfirm>
         </Space>
+      ),
+    },
+    {
+      title: "Actions",
+      key: "actions",
+      render: (record: Batch) => (
+        <Button
+          type="link"
+          onClick={() => navigate(`/dashboard/batch-students/batchIds=${record.batch_id}`)}
+        >
+          View Students
+        </Button>
       ),
     },
   ];

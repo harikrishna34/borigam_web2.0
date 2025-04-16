@@ -1,9 +1,7 @@
 import { Layout, Menu, Button } from "antd";
 import {
   HomeOutlined,
-  SettingOutlined,
   LogoutOutlined,
-  BookOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
 } from "@ant-design/icons";
@@ -40,8 +38,8 @@ const CollegeSidebar = () => {
   // Determine the selected key based on current route
   const getSelectedKey = () => {
     const path = location.pathname;
-    if (path.includes("/dashboard")) return "home";
-    if (path.includes("/settingscreen")) return "profile";
+    if (path.includes("/college/dashboard")) return "home";
+    // if (path.includes("/settingscreen")) return "profile";
     if (path.includes("/study-material")) return "StudyMaterial";
     return "home";
   };
@@ -100,44 +98,44 @@ const CollegeSidebar = () => {
                 key: "home",
                 icon: <HomeOutlined style={{ fontSize: "20px" }} />,
                 label: "Dashboard",
-                onClick: () => navigate("/dashboard"),
+                onClick: () => navigate("/college/dashboard"),
                 style: {
-                  backgroundColor: location.pathname.includes("/dashboard")
+                  backgroundColor: location.pathname.includes("/college/dashboard")
                     ? "rgba(102, 51, 153, 0.1)"
                     : "transparent",
-                  borderLeft: location.pathname.includes("/dashboard")
+                  borderLeft: location.pathname.includes("/college/dashboard")
                     ? "purple"
                     : "none",
                 },
               },
-              {
-                key: "profile",
-                icon: <SettingOutlined style={{ fontSize: "20px" }} />,
-                label: "Settings",
-                onClick: () => navigate("/settingscreen"),
-                style: {
-                  backgroundColor: location.pathname.includes("/settingscreen")
-                    ? "rgba(102, 51, 153, 0.1)"
-                    : "transparent",
-                  borderLeft: location.pathname.includes("/settingscreen")
-                    ? "purple"
-                    : "none",
-                },
-              },
-              {
-                key: "StudyMaterial",
-                icon: <BookOutlined style={{ fontSize: "20px" }} />,
-                label: "Study Material",
-                onClick: () => navigate("/study-material"),
-                style: {
-                  backgroundColor: location.pathname.includes("/study-material")
-                    ? "rgba(102, 51, 153, 0.1)"
-                    : "transparent",
-                  borderLeft: location.pathname.includes("/study-material")
-                    ? "purple"
-                    : "none",
-                },
-              },
+              // {
+              //   key: "profile",
+              //   icon: <SettingOutlined style={{ fontSize: "20px" }} />,
+              //   label: "Settings",
+              //   onClick: () => navigate("/settingscreen"),
+              //   style: {
+              //     backgroundColor: location.pathname.includes("/settingscreen")
+              //       ? "rgba(102, 51, 153, 0.1)"
+              //       : "transparent",
+              //     borderLeft: location.pathname.includes("/settingscreen")
+              //       ? "purple"
+              //       : "none",
+              //   },
+              // },
+              // {
+              //   key: "StudyMaterial",
+              //   icon: <BookOutlined style={{ fontSize: "20px" }} />,
+              //   label: "Study Material",
+              //   onClick: () => navigate("/study-material"),
+              //   style: {
+              //     backgroundColor: location.pathname.includes("/study-material")
+              //       ? "rgba(102, 51, 153, 0.1)"
+              //       : "transparent",
+              //     borderLeft: location.pathname.includes("/study-material")
+              //       ? "purple"
+              //       : "none",
+              //   },
+              // },
             ]}
           />
         </div>

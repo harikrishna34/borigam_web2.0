@@ -83,6 +83,7 @@ const TestScreen: React.FC = () => {
   const { testId } = useParams<{ testId: string }>();
   const [isFinalModalVisible, setIsFinalModalVisible] = useState(false);
   const [finalResult, setFinalResult] = useState<any>(null);
+
   // In your state declarations, keep these:
 
   const navigate = useNavigate();
@@ -140,6 +141,10 @@ const TestScreen: React.FC = () => {
         const submissions = submissionsResponse.data?.submissions || [];
 
         const questionsData: Question[] = [];
+
+        if (questionsData.length > 0) {
+          setSeenQuestions([questionsData[0].id]);
+        }
         for (const submission of submissions) {
           const questionResponse = await axios.get(
             `http://13.233.33.133:3001/api/testsubmission/setQuestionStatusUnanswered?test_id=${testId}&question_id=${submission.question_id}`,
@@ -310,9 +315,24 @@ const TestScreen: React.FC = () => {
   };
 
   const handlePrevious = () => {
+    const currentQ = questions[currentQuestionIndex];
+
+    // Mark current question as seen
+    if (!seenQuestions.includes(currentQ.id)) {
+      setSeenQuestions([...seenQuestions, currentQ.id]);
+    }
+
     if (currentQuestionIndex > 0) {
       setCurrentQuestionIndex(currentQuestionIndex - 1);
     }
+  };
+
+  const handleQuestionNavigation = (index: number) => {
+    const questionId = questions[index].id;
+    if (!seenQuestions.includes(questionId)) {
+      setSeenQuestions([...seenQuestions, questionId]);
+    }
+    setCurrentQuestionIndex(index);
   };
 
   useEffect(() => {
@@ -597,14 +617,14 @@ const TestScreen: React.FC = () => {
                     selectedAnswers[q.id]?.text !== null;
                   const seen = seenQuestions.includes(q.id);
 
-                  let bgColor = "#faad14"; // Gold
+                  let bgColor = "#faad14"; // Gold - not seen
                   let textColor = "#000";
 
                   if (answered) {
-                    bgColor = "#52c41a";
+                    bgColor = "#52c41a"; // Green - answered
                     textColor = "#fff";
                   } else if (seen) {
-                    bgColor = "#1890ff";
+                    bgColor = "#1890ff"; // Blue - seen but not answered
                     textColor = "#fff";
                   }
 
@@ -616,12 +636,7 @@ const TestScreen: React.FC = () => {
                         backgroundColor: bgColor,
                         color: textColor,
                       }}
-                      onClick={() => {
-                        setCurrentQuestionIndex(index);
-                        if (!seenQuestions.includes(q.id)) {
-                          setSeenQuestions([...seenQuestions, q.id]);
-                        }
-                      }}
+                      onClick={() => handleQuestionNavigation(index)}
                     >
                       {index + 1}
                     </Button>
