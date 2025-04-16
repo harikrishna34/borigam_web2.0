@@ -8,6 +8,7 @@ import {
   Tag,
   Space,
   message,
+  Descriptions,
 } from "antd";
 import StudentLayoutWrapper from "../../components/studentlayout/studentlayoutWrapper";
 
@@ -40,20 +41,26 @@ interface Option {
 interface Answer {
   question_id: number;
   question_text: string;
-  submitted_option_id: number;
-  is_correct: boolean;
+  question_type: string;
+  marks_awarded: number;
+  marks_deducted: number;
+  submitted_option_ids: number[];
+  is_correct: boolean | null;
+  submission_status: string;
   options: Option[];
 }
 
 interface TestResult {
-  test_id: number;
-  test_name: string;
   total_questions: number;
   attempted: number;
+  unattempted: number;
   correct: number;
   wrong: number;
   final_score: string;
   final_result: string;
+  marks_awarded: number;
+  marks_deducted: number;
+  total_marks_awarded: number;
 }
 
 const StudentCompletedTest = () => {
@@ -110,7 +117,7 @@ const StudentCompletedTest = () => {
       setAnswers([]);
 
       const response = await fetch(
-        `http://13.233.33.133:3001/api/testsubmission/getTestResultById?test_id=${test_id}`,
+        `http://localhost:3001/api/testsubmission/submitFinalResult?test_id=${test_id}`,
         {
           method: "GET",
           headers: {
@@ -146,19 +153,9 @@ const StudentCompletedTest = () => {
       key: "course_name",
     },
     {
-      title: "batch",
+      title: "Batch",
       dataIndex: "batch_name",
       key: "batch_name",
-    },
-    {
-      title: "Test Date",
-      dataIndex: "start_date",
-      key: "start_date",
-    },
-    {
-      title: "Created Date",
-      dataIndex: "created_at",
-      key: "created_at",
     },
     {
       title: "Score",
@@ -181,10 +178,18 @@ const StudentCompletedTest = () => {
       title: "Question",
       dataIndex: "question_text",
       key: "question_text",
-      render: (text: string, _record: Answer, index: number) => (
-        <Text strong>
-          {index + 1}. {text}
-        </Text>
+      render: (text: string, record: Answer, index: number) => (
+        <div>
+          <Text strong>
+            {index + 1}. {text}
+          </Text>
+          <div>
+            <Tag color={record.question_type === "radio" ? "blue" : "orange"}>
+              {record.question_type === "radio" ? "Single Answer" : "Multiple Answers"}
+            </Tag>
+            <Text type="secondary">Marks: {record.marks_awarded}</Text>
+          </div>
+        </div>
       ),
       width: "40%",
     },
@@ -195,7 +200,7 @@ const StudentCompletedTest = () => {
         <Space direction="vertical">
           {record.options.map((option) => {
             // Check if this option was submitted by the student
-            const isSubmitted = record.submitted_option_id === option.option_id;
+            const isSubmitted = record.submitted_option_ids.includes(option.option_id);
             // Check if this option is correct
             const isCorrectOption = option.is_correct;
             
@@ -227,11 +232,16 @@ const StudentCompletedTest = () => {
       title: "Result",
       key: "result",
       align: "center" as const,
-      render: (record: Answer) => (
-        <Tag color={record.is_correct ? "green" : "red"}>
-          {record.is_correct ? "Correct" : "Incorrect"}
-        </Tag>
-      ),
+      render: (record: Answer) => {
+        if (record.submission_status === "unanswered") {
+          return <Tag color="orange">Unanswered</Tag>;
+        }
+        return (
+          <Tag color={record.is_correct ? "green" : "red"}>
+            {record.is_correct ? "Correct" : "Incorrect"}
+          </Tag>
+        );
+      },
     },
   ];
 
@@ -274,31 +284,29 @@ const StudentCompletedTest = () => {
             {selectedResult && (
               <>
                 <Card title="Test Summary" style={{ marginBottom: 24 }}>
-                  <div
-                    style={{
-                      display: "grid",
-                      gridTemplateColumns: "repeat(3, 1fr)",
-                      gap: "16px",
-                    }}
-                  >
-                    <div>
-                      <Text strong>Total Questions:</Text>{" "}
+                  <Descriptions bordered column={3}>
+                    <Descriptions.Item label="Total Questions">
                       {selectedResult.total_questions}
-                    </div>
-                    <div>
-                      <Text strong>Attempted:</Text> {selectedResult.attempted}
-                    </div>
-                    <div>
-                      <Text strong>Correct:</Text> {selectedResult.correct}
-                    </div>
-                    <div>
-                      <Text strong>Wrong:</Text> {selectedResult.wrong}
-                    </div>
-                    <div>
-                      <Text strong>Score:</Text> {selectedResult.final_score}%
-                    </div>
-                    <div>
-                      <Text strong>Result:</Text>{" "}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Attempted">
+                      {selectedResult.attempted}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Unattempted">
+                      {selectedResult.unattempted}
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Correct Answers">
+                      <Tag color="green">{selectedResult.correct}</Tag>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Wrong Answers">
+                      <Tag color="red">{selectedResult.wrong}</Tag>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Final Score">
+                      <Text strong>{selectedResult.final_score}%</Text>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Total Marks Awarded">
+                      <Text strong>{selectedResult.total_marks_awarded}</Text>
+                    </Descriptions.Item>
+                    <Descriptions.Item label="Final Result">
                       <Tag
                         color={
                           selectedResult.final_result === "Pass"
@@ -308,8 +316,8 @@ const StudentCompletedTest = () => {
                       >
                         {selectedResult.final_result}
                       </Tag>
-                    </div>
-                  </div>
+                    </Descriptions.Item>
+                  </Descriptions>
                 </Card>
 
                 <Card title="Question Details">
