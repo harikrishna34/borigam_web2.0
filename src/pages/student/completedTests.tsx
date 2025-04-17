@@ -117,7 +117,7 @@ const StudentCompletedTest = () => {
       setAnswers([]);
 
       const response = await fetch(
-        `http://localhost:3001/api/testsubmission/submitFinalResult?test_id=${test_id}`,
+        `http://13.233.33.133:3001/api/testsubmission/submitFinalResult?test_id=${test_id}`,
         {
           method: "GET",
           headers: {

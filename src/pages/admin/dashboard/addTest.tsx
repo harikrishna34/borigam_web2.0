@@ -57,7 +57,6 @@ const AddTest = () => {
   const [filteredQuestions, setFilteredQuestions] = useState<Question[]>([]);
   const [courses, setCourses] = useState<Course[]>([]);
   const [batches, setBatches] = useState<Batch[]>([]);
-  const [filteredBatches, setFilteredBatches] = useState<Batch[]>([]);
   const [selectedQuestions, setSelectedQuestions] = useState<number[]>([]);
   const [testType, setTestType] = useState<string>("");
   const [selectedCourse, setSelectedCourse] = useState<number | null>(null);
@@ -142,28 +141,10 @@ const AddTest = () => {
 
       const data = await response.json();
       setBatches(data.data);
-      setFilteredBatches(data.data);
     } catch (error) {
       console.error("Error fetching batches:", error);
     }
   };
-
-  // Filter batches when course changes
-  useEffect(() => {
-    if (selectedCourse) {
-      const filtered = batches.filter(
-        (batch) => batch.course_id === selectedCourse
-      );
-      setFilteredBatches(filtered);
-      setSelectedBatches((prev) =>
-        prev.filter((batchId) =>
-          filtered.some((batch) => batch.batch_id === batchId)
-        )
-      );
-    } else {
-      setFilteredBatches(batches);
-    }
-  }, [selectedCourse, batches]);
 
   const handleCheckboxChange = (questionId: number, checked: boolean) => {
     setSelectedQuestions((prev) =>
@@ -316,7 +297,7 @@ const AddTest = () => {
               value={selectedBatches}
               style={{ width: "100%", marginBottom: "20px" }}
               tagRender={({ label, value, closable, onClose }) => {
-                const batch = filteredBatches.find((b) => b.batch_id === value);
+                const batch = batches.find((b) => b.batch_id === value);
                 return (
                   <Tag
                     closable={closable}
@@ -328,8 +309,8 @@ const AddTest = () => {
                 );
               }}
             >
-              {Array.isArray(filteredBatches) &&
-                filteredBatches.map((batch) => (
+              {Array.isArray(batches) &&
+                batches.map((batch) => (
                   <Option key={batch.batch_id} value={batch.batch_id}>
                     {batch.name} ({batch.course_name})
                   </Option>
