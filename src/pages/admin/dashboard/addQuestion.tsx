@@ -143,10 +143,8 @@ const AddQuestions = () => {
     formData.append("negative_marks", negativeMarks.toString());
 
     if (questionType === "text") {
-      formData.append(
-        "options",
-        JSON.stringify([{ option_text: textAnswer, is_correct: true }])
-      );
+      formData.append("correct_answer", JSON.stringify({ textAnswer }));
+      formData.append("options", JSON.stringify([]));
     } else {
       const optionsData = options.map((option) => ({
         option_text: option.option_text,

@@ -119,7 +119,7 @@ const StudentDashboard: React.FC = () => {
     return new Date(parseInt(timestamp) * 1000).toLocaleString();
   };
 
-  const handleStartTest = async (testId: number) => {
+  const handleStartTest = async (testId: number, duration: number) => {
     try {
       setStartingTest(true);
       const response = await fetch(
@@ -133,6 +133,7 @@ const StudentDashboard: React.FC = () => {
           body: JSON.stringify({ test_id: testId }),
         }
       );
+      localStorage.setItem("testDuration", duration?.toString());
       navigate(`/student/TestScreen/${testId}`);
       // const data = await response.json();
       if (!response.ok) {
@@ -324,7 +325,7 @@ const StudentDashboard: React.FC = () => {
                         <Button
                           type="primary"
                           loading={startingTest}
-                          onClick={() => handleStartTest(test.test_id)}
+                          onClick={() => handleStartTest(test.test_id, test.duration)}
                           disabled={!isTestActive(test)}
                         >
                           Start Test

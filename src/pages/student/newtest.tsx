@@ -83,8 +83,7 @@ const TestScreen: React.FC = () => {
   const { testId } = useParams<{ testId: string }>();
   const [isFinalModalVisible, setIsFinalModalVisible] = useState(false);
   const [finalResult, setFinalResult] = useState<any>(null);
-
-  // In your state declarations, keep these:
+  const testDuration = localStorage.getItem("testDuration");
 
   const navigate = useNavigate();
   const token = localStorage.getItem("token");
@@ -108,7 +107,7 @@ const TestScreen: React.FC = () => {
     };
   }, []);
 
-  // Timer effect
+  // Timer effect with auto-submit
   useEffect(() => {
     let timer: NodeJS.Timeout;
 
@@ -116,12 +115,16 @@ const TestScreen: React.FC = () => {
       timer = setTimeout(() => {
         setTimeLeft((prevTime) => prevTime - 1);
       }, 1000);
+    } else if (timerActive && timeLeft === 0 && testStarted) {
+      // Time's up, auto-submit the test
+      message.warning("Time's up! Submitting your test...");
+      submitFinalResult();
     }
 
     return () => {
       if (timer) clearTimeout(timer);
     };
-  }, [timeLeft, timerActive]);
+  }, [timeLeft, timerActive, testStarted]);
 
   // Load test and questions
   useEffect(() => {
@@ -139,6 +142,9 @@ const TestScreen: React.FC = () => {
         );
 
         const submissions = submissionsResponse.data?.submissions || [];
+        // Set a default duration if not available from API (e.g., 30 minutes)
+        const durationInMinutes = testDuration ? parseInt(testDuration) : 0;
+        setTimeLeft(durationInMinutes * 60);
 
         const questionsData: Question[] = [];
 
@@ -194,6 +200,40 @@ const TestScreen: React.FC = () => {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(selectedAnswers));
     }
   }, [selectedAnswers]);
+
+const submitFinalResult = async () => {
+  if (!testId) return;
+  
+  try {
+    setSubmitting(true);
+    // Auto-save the current answer before submitting
+    const currentQ = questions[currentQuestionIndex];
+    if (currentQ) {
+      const answer = selectedAnswers[currentQ.id];
+      if (answer?.optionId || answer?.optionIds?.length || answer?.text) {
+        await saveAnswerToServer(currentQ.id, answer);
+      }
+    }
+    
+    const response = await axios.get(
+      `http://13.233.33.133:3001/api/testsubmission/submitFinalResult?test_id=${testId}`,
+      axiosConfig
+    );
+    setFinalResult(response.data.result);
+    setIsFinalModalVisible(true);
+    
+    // Clean up localStorage
+    localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem("testDuration");
+    
+    setTimerActive(false);
+  } catch (error) {
+    console.error("Failed to submit final result:", error);
+    message.error("Failed to submit final result");
+  } finally {
+    setSubmitting(false);
+  }
+};
 
   const formatTime = (seconds: number) => {
     const minutes = Math.floor(seconds / 60);
