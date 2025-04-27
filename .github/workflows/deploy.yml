@@ -32,8 +32,8 @@ jobs:
 
       - name: Build and Push Docker image
         run: |
-          docker build -t your-dockerhub-username/borigam-frontend:latest .
-          docker push your-dockerhub-username/borigam-frontend:latest
+          docker build -t harilakki34/borigam-frontend:latest .
+          docker push harilakki34/borigam-frontend:latest
 
       - name: Set up kubectl
         uses: azure/setup-kubectl@v3
